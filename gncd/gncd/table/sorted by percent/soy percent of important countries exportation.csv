@@ -1,0 +1,145 @@
+,crop_type,country,average_production,percent
+18,soy,Brazil,69118726.16666667,46.0497%
+136,soy,United States of America,54123494.666666664,36.0593%
+4,soy,Argentina,7991928.666666667,5.3246%
+98,soy,Paraguay,5607993.666666667,3.7363%
+26,soy,Canada,4546622.833333333,3.0291%
+137,soy,Uruguay,2505784.1666666665,1.6695%
+132,soy,Ukraine,2465529.8333333335,1.6426%
+87,soy,Netherlands,941436.3333333334,0.6272%
+107,soy,Russian Federation,729129.6666666666,0.4858%
+33,soy,Croatia,196985.83333333334,0.1312%
+12,soy,Belgium,193597.0,0.1290%
+55,soy,India,173320.83333333334,0.1155%
+106,soy,Romania,172266.0,0.1148%
+112,soy,Serbia,146802.66666666666,0.0978%
+46,soy,France,121583.66666666667,0.0810%
+28,soy,"China, mainland",116809.16666666667,0.0778%
+48,soy,Germany,100734.0,0.0671%
+130,soy,Türkiye,78638.16666666667,0.0524%
+54,soy,Hungary,76683.83333333333,0.0511%
+6,soy,Austria,73844.16666666667,0.0492%
+114,soy,Slovakia,62569.5,0.0417%
+43,soy,Ethiopia,54941.166666666664,0.0366%
+91,soy,Nigeria,44095.666666666664,0.0294%
+127,soy,Togo,36270.833333333336,0.0242%
+115,soy,Slovenia,29385.333333333332,0.0196%
+105,soy,Republic of Moldova,29222.833333333332,0.0195%
+78,soy,Malaysia,27437.5,0.0183%
+65,soy,Kazakhstan,26532.333333333332,0.0177%
+77,soy,Malawi,26512.666666666668,0.0177%
+61,soy,Italy,26046.166666666668,0.0174%
+15,soy,Bolivia (Plurinational State of),24569.166666666668,0.0164%
+118,soy,Spain,23191.833333333332,0.0155%
+142,soy,Zambia,22616.333333333332,0.0151%
+24,soy,Cambodia,20456.8,0.0136%
+134,soy,United Kingdom of Great Britain and Northern Ireland,15578.0,0.0104%
+101,soy,Poland,14458.0,0.0096%
+83,soy,Mozambique,13632.666666666666,0.0091%
+131,soy,Uganda,12305.333333333334,0.0082%
+116,soy,South Africa,9662.666666666666,0.0064%
+49,soy,Ghana,8979.0,0.0060%
+34,soy,Czechia,6928.5,0.0046%
+27,soy,Chile,6076.0,0.0040%
+135,soy,United Republic of Tanzania,5892.75,0.0039%
+11,soy,Belarus,5620.333333333333,0.0037%
+25,soy,Cameroon,5319.25,0.0035%
+84,soy,Myanmar,5310.666666666667,0.0035%
+21,soy,Burkina Faso,5082.0,0.0034%
+16,soy,Bosnia and Herzegovina,4718.0,0.0031%
+126,soy,Thailand,4504.333333333333,0.0030%
+37,soy,Djibouti,4012.3333333333335,0.0027%
+102,soy,Portugal,3814.1666666666665,0.0025%
+20,soy,Bulgaria,3385.1666666666665,0.0023%
+5,soy,Australia,2768.0,0.0018%
+7,soy,Bahamas,2759.0,0.0018%
+74,soy,Lithuania,2213.6666666666665,0.0015%
+56,soy,Indonesia,2193.1666666666665,0.0015%
+129,soy,Tunisia,1650.0,0.0011%
+36,soy,Denmark,1367.5,0.0009%
+59,soy,Ireland,1234.8333333333333,0.0008%
+50,soy,Greece,1116.3333333333333,0.0007%
+69,soy,Lao People's Democratic Republic,992.0,0.0007%
+70,soy,Latvia,987.0,0.0007%
+140,soy,Viet Nam,721.3333333333334,0.0005%
+53,soy,Honduras,570.6,0.0004%
+113,soy,Singapore,534.0,0.0004%
+35,soy,Democratic Republic of the Congo,510.3333333333333,0.0003%
+32,soy,Côte d'Ivoire,499.3333333333333,0.0003%
+40,soy,Egypt,473.5,0.0003%
+81,soy,Mexico,466.6666666666667,0.0003%
+41,soy,Estonia,400.0,0.0003%
+133,soy,United Arab Emirates,358.3333333333333,0.0002%
+128,soy,Trinidad and Tobago,281.0,0.0002%
+104,soy,Republic of Korea,261.5,0.0002%
+47,soy,Georgia,235.66666666666666,0.0002%
+66,soy,Kenya,181.83333333333334,0.0001%
+0,soy,Afghanistan,178.75,0.0001%
+95,soy,Pakistan,167.16666666666666,0.0001%
+123,soy,Switzerland,161.16666666666666,0.0001%
+143,soy,Zimbabwe,158.5,0.0001%
+79,soy,Mali,153.5,0.0001%
+108,soy,Rwanda,148.0,0.0001%
+122,soy,Sweden,110.33333333333333,0.0001%
+89,soy,Nicaragua,75.5,0.0001%
+71,soy,Lebanon,75.0,0.0000%
+60,soy,Israel,60.2,0.0000%
+93,soy,Norway,56.5,0.0000%
+63,soy,Japan,54.666666666666664,0.0000%
+100,soy,Philippines,54.4,0.0000%
+120,soy,Sudan,54.333333333333336,0.0000%
+110,soy,Saudi Arabia,53.8,0.0000%
+68,soy,Kyrgyzstan,48.333333333333336,0.0000%
+117,soy,South Sudan,48.0,0.0000%
+57,soy,Iran (Islamic Republic of),45.0,0.0000%
+64,soy,Jordan,39.75,0.0000%
+19,soy,Brunei Darussalam,28.2,0.0000%
+29,soy,Colombia,27.5,0.0000%
+99,soy,Peru,25.166666666666668,0.0000%
+38,soy,Dominican Republic,23.166666666666668,0.0000%
+17,soy,Botswana,21.5,0.0000%
+119,soy,Sri Lanka,21.0,0.0000%
+94,soy,Oman,16.25,0.0000%
+51,soy,Guatemala,16.166666666666668,0.0000%
+13,soy,Belize,15.333333333333334,0.0000%
+85,soy,Namibia,14.25,0.0000%
+67,soy,Kuwait,10.0,0.0000%
+86,soy,Nepal,9.833333333333334,0.0000%
+75,soy,Luxembourg,9.166666666666666,0.0000%
+92,soy,North Macedonia,9.0,0.0000%
+124,soy,Syrian Arab Republic,6.25,0.0000%
+88,soy,New Zealand,5.0,0.0000%
+9,soy,Bangladesh,3.2,0.0000%
+22,soy,Burundi,3.0,0.0000%
+39,soy,Ecuador,2.25,0.0000%
+111,soy,Senegal,1.5,0.0000%
+58,soy,Iraq,1.5,0.0000%
+31,soy,Costa Rica,1.4,0.0000%
+3,soy,Angola,1.25,0.0000%
+52,soy,Guyana,1.25,0.0000%
+62,soy,Jamaica,1.0,0.0000%
+73,soy,Liberia,1.0,0.0000%
+103,soy,Qatar,1.0,0.0000%
+141,soy,Yemen,0.6666666666666666,0.0000%
+45,soy,Finland,0.6,0.0000%
+96,soy,Panama,0.5,0.0000%
+42,soy,Eswatini,0.5,0.0000%
+44,soy,Fiji,0.4,0.0000%
+80,soy,Mauritius,0.25,0.0000%
+8,soy,Bahrain,0.25,0.0000%
+2,soy,Algeria,0.0,0.0000%
+82,soy,Morocco,0.0,0.0000%
+139,soy,Venezuela (Bolivarian Republic of),0.0,0.0000%
+138,soy,Uzbekistan,0.0,0.0000%
+76,soy,Madagascar,0.0,0.0000%
+10,soy,Barbados,0.0,0.0000%
+23,soy,Cabo Verde,0.0,0.0000%
+14,soy,Benin,0.0,0.0000%
+1,soy,Albania,0.0,0.0000%
+90,soy,Niger,0.0,0.0000%
+30,soy,Congo,0.0,0.0000%
+125,soy,Tajikistan,0.0,0.0000%
+97,soy,Papua New Guinea,0.0,0.0000%
+121,soy,Suriname,0.0,0.0000%
+109,soy,Samoa,0.0,0.0000%
+72,soy,Lesotho,0.0,0.0000%
