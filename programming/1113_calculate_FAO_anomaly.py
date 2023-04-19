@@ -16,18 +16,26 @@ import warnings
 import heapq
 from PIL import Image
 from sklearn.linear_model import LinearRegression
-
+from collections import Counter
 from scipy import ndimage
+from sklearn.ensemble import RandomForestRegressor as RF
+from sklearn.inspection import plot_partial_dependence
 
-crops = ['wheat','maize','soy']#,''wheat,'millet', 'sorghum', 'rice','cassava', 'bean']
+from pygam import LinearGAM, f, s, te
+
+crops = ['maize','wheat','soy']#,''wheat,'millet', 'sorghum', 'rice','cassava', 'bean']
 
 
 def calculate_production():
     for crop in crops:
         df = pd.read_csv('data/crop/FAO_' + crop + '_1949_2020.csv')
         df = df[(df.year >= 1961) & (df.year <= 2020)]
+
+        # calculate the trends in the climate data variables
+        df_clim=df.copy()
+        df_clim = df_clim.reindex(columns=['year', 'country', 'yldAnomGauAbs', 'yldAnomGau','sumP1', 'EDD1', 'sfcSMfl1','sfcSMgl1','CDD1','TAV1','EDD1haWgt','sumP1haWgt', 'sfcSMfl1haWgt','sfcSMgl1haWgt','CDD1haWgt','TAV1haWgt'])
         df = df.reindex(columns=['year', 'country', 'Production', 'yldAnomGau', 'yldAnomSmooth5', 'yldAnomSmooth9'])
-        
+
         # if crop=='wheat':
         #     df=df[~(df['country']=='China')]
         #     df = df[~(df['country'] == 'India')]
@@ -62,7 +70,7 @@ def calculate_production():
         if True:
             important_countries_list_after1990 = []
             total_percent = 0
-            flag=0.80
+            flag = 0.80
             if crop == 'maize':
                 flag = 0.75
             elif crop == 'wheat':
@@ -137,7 +145,7 @@ def calculate_production():
                 df1.sort_values(by='year', inplace=True, ascending=True)
                 # rewrite df with df1
                 df[df['country'] == country] = df1[df1['country'] == country]
-            # print(important_countries_list)
+
             # Identify when there are years with at least 4 important countries that have poor yields
             # df.crop_yield_anomaly.fillna(0, inplace=True)
             # filling background_color for blew -5%
@@ -211,27 +219,37 @@ def calculate_production():
                 if ds.equals(dslist[2]):
                     define_method = 'bottom quartile'
                 # time_series_of_yield_anomalies(crop,define_method, important_countries_list_after1990, df,every_year_important_countries,model_table)
-                #     poor_year_important_countries.loc[len(poor_year_important_countries)] = [crop, year, len(intersection_important_countries ),impotant_countries]
 
             # Create grid graphs for each definition of poor year (e.g. 5%, 10%, and bottom quartile) that shows which countries
             #  experience a poor year in which years.
             every_year_important_countries.replace(0,np.nan)
             # if df.equals(dslistsmooth[0]):
-            #     every_year_important_countries.to_csv( 'table/number of countries/' + crop +str(flag)+ 'Smooth5_number_every_year_important_countries_with0.csv')
+            #     every_year_important_countries.to_csv( 'table/number of countries/' + crop +str(flag)+ 'Smooth5_number_every_year_important_countries.csv')
             # if df.equals(dslistsmooth[1]):
             #     every_year_important_countries.to_csv(
-            #         'table/number of countries/' + crop + str(flag) + 'Gau_number_every_year_important_countries_with0.csv')
+            #         'table/number of countries/' + crop + str(flag) + 'GauAbs_number_every_year_important_countries.csv')
             # if df.equals(dslistsmooth[2]):
             #     every_year_important_countries.to_csv(
-            #         'table/number of countries/' + crop + str(flag) + 'Smooth9_number_every_year_important_countries_with0.csv')
+            #         'table/number of countries/' + crop + str(flag) + 'Smooth9_number_every_year_important_countries.csv')
             pore='yield'
             # calculate_the_linear_trends(crop, every_year_important_countries,pore)
-            # calculate_censored_percent_yield_anomaly_time_series(crop,important_countries_list_after1990,df)
+            if df.equals(dslistsmooth[1]):
+                stabilization_countries,censored_yield=calculate_censored_percent_yield_anomaly_time_series(crop,important_countries_list_after1990,df)
+                if 'Former USSR' in stabilization_countries:
+                    stabilization_countries.remove('Former USSR')
+                if 'Trkiye' in stabilization_countries:
+                    stabilization_countries.remove('Trkiye')
+                # climate_trend_each_country(crop, stabilization_countries, df_clim, censored_yield)
+                gam(crop, stabilization_countries, df_clim)
+                random_forests(crop, stabilization_countries, df_clim)
+            else:
+                 calculate_censored_percent_yield_anomaly_time_series(crop, important_countries_list_after1990, df)
+
             # combine_image(crop)
             # pooryears = calculate_the_poor_years(crop, every_year_important_countries)
-            # print(pooryears)
+            # # print(pooryears)
             # if crop == 'wheat':
-            #     pooryears.append(2007)
+            #      pooryears.append(2007)
             # crop_yield_anomalies_spatial_map(crop, df, pooryears)
 
         #     year_vals = ds['Year'].drop_duplicates()
@@ -311,14 +329,17 @@ def calculate_production():
 def calculate_exportation():
     for crop in crops:
         important_countries_list = []
-        clos1 = ['crop_type', 'country', 'average_production', 'percent']
+        clos1 = ['crop_type', 'country', 'average_exportation', 'percent']
         percent_of_important_countries = pd.DataFrame(columns=clos1)
+        percent_of_former_ussr=pd.DataFrame(columns=clos1)
         df = pd.read_csv('data/crop/FAO_exportation.csv')
         # Make sure not to double count China
         df = df[~(df.Area == 'China, Taiwan Province of')]
         df = df[~(df.Area == 'China')]
         df = df[~(df.Area == 'China, Hong Kong SAR')]
         df = df[~(df.Area == 'China, Macao SAR')]
+        ussr_list=['Armenia','Azerbaijan','Belarus','Estonia','Georgia','Kazakhstan','Kyrgyzstan','Latvia','Lithuania','Republic of Moldova','Russian Federation','Tajikistan','Turkmenistan','Ukraine','Uzbekistan']
+        former_ussr_list = list(set(df['Area'].drop_duplicates()).intersection(ussr_list))
 
         df['Value'].fillna(0, inplace=True)
         if crop == 'maize':
@@ -334,19 +355,30 @@ def calculate_exportation():
         ds.reset_index()
         for country in ds['Area'].drop_duplicates():
             # calculate average total national production over the period 2015-2020
-            average_total_production = ds[ds['Area'] == country].Value.sum() / len(ds[ds['Area'] == country])
+            average_total_exportation = ds[ds['Area'] == country].Value.sum() / len(ds[ds['Area'] == country])
             percent_of_important_countries.loc[len(percent_of_important_countries)] = [crop, country,
-                                                                                       average_total_production,
+                                                                                       average_total_exportation,
                                                                                        0]  # ,average_total_production/total_global_production]
-        # calculate average total global production
-        average_total_global_production = percent_of_important_countries.average_production.sum()
+            if country in former_ussr_list:
+                percent_of_former_ussr.loc[len(percent_of_former_ussr)]=[crop, country,average_total_exportation,0]
+        # calculate average total global exportation
+        average_total_global_exportation = percent_of_important_countries.average_exportation.sum()
+        ussr_exportation=percent_of_former_ussr.average_exportation.sum()
+        # for coun in former_ussr_list:
+            # ussr_percent=ussr_percent+ percent_of_important_countries[percent_of_important_countries['country']==country].percent.values
+
+            # ussr_exportation = ussr_exportation + float(percent_of_important_countries[percent_of_important_countries.country == coun].average_exportation.values)
+        percent_of_important_countries.loc[len(percent_of_important_countries)]=[crop,'Former USSR',ussr_exportation,0]
 
         for country in percent_of_important_countries.country:
-            #  calculate the percent of total global crop production produced by each country
+            #  calculate the percent of total global crop exportation produced by each country
             percent_of_important_countries.loc[(percent_of_important_countries.country == country), 'percent'] = float(
                 percent_of_important_countries[
-                    percent_of_important_countries.country == country].average_production / average_total_global_production)
-        # sorted by percent
+                    percent_of_important_countries.country == country].average_exportation / average_total_global_exportation)
+
+        for coun in former_ussr_list:
+            percent_of_important_countries=percent_of_important_countries[~(percent_of_important_countries['country']==coun)]
+        # sorted by percent=
         percent_of_important_countries.sort_values(by='percent', ascending=False, inplace=True)
         percent_of_important_countries.reset_index()
 
@@ -372,7 +404,8 @@ def calculate_exportation():
 
         percent_of_important_countries['percent'] = percent_of_important_countries['percent'].apply(
             lambda x: format(x, '.4%'))
-        # percent_of_important_countries.to_csv('table/sorted by percent/' + crop + ' percent of important countries exportation.csv')
+
+        percent_of_important_countries.to_csv('table/sorted by percent/' + crop + ' percent of important countries exportation.csv')
 
         # calculate the percent of each year
         df['eptGauExp']=''
@@ -432,8 +465,7 @@ def calculate_exportation():
         every_year_important_countries.fillna(0,inplace=True)
         # every_year_important_countries.to_csv('table/number of countries/'+crop+str(flag)+'Gau number of important countries exportation.csv')
         pore='exportation'
-        calculate_the_linear_trends(crop, every_year_important_countries,pore)
-    print('123')
+        # calculate_the_linear_trends(crop, every_year_important_countries,pore)
 
 
 
@@ -462,12 +494,6 @@ def running_mean(data, w):
 
 
 def combine_image(crop):
-    # img1 = Image.open(
-    #     r'C:/Users/mari/Desktop/results/new analysis/test/stacked bar chart/' + crop + 'yield anomaly -5%' + '.png')
-    # img2 = Image.open(
-    #     r'C:/Users/mari/Desktop/results/new analysis/test/stacked bar chart/' + crop + 'yield anomaly -10%' + '.png')
-    # img3 = Image.open(
-    #     r'C:/Users/mari/Desktop/results/new analysis/test/stacked bar chart/' + crop + 'yield anomaly botttom quartile' + '.png')
     img1 = Image.open(
         'figures/linear trend/' + crop + '75yldAnomGau.png')
     img2 = Image.open(
@@ -569,8 +595,8 @@ def calculate_the_poor_years(crop, every_year_important_countries):
 def calculate_the_linear_trends(crop, every_year_important_countries,pore):
     fig = plt.figure()
     X = every_year_important_countries[['year']]
-    Y1 = every_year_important_countries['number_of_important_countries_blew_-5%']
-    Y2 = every_year_important_countries['number_of_important_countries_blew_-10%']
+    # Y1 = every_year_important_countries['number_of_important_countries_blew_-5%']
+    # Y2 = every_year_important_countries['number_of_important_countries_blew_-10%']
     Y3 = every_year_important_countries['number_of_important_countries_bottom_quartile']
     smooth = every_year_important_countries.columns[-1]
     # plt.scatter(X,Y1)
@@ -578,25 +604,25 @@ def calculate_the_linear_trends(crop, every_year_important_countries,pore):
     regr = LinearRegression()
     regr1 = LinearRegression()
     regr2 = LinearRegression()
-    regr.fit(X, Y1)
-    regr1.fit(X, Y2)
+    # regr.fit(X, Y1)
+    # regr1.fit(X, Y2)
     regr2.fit(X, Y3)
-    plt.plot(X, regr.predict(X), color='red', label='blew_-5%')
-    plt.plot(X, regr1.predict(X), color='blue', label='blew_-10%')
+    # plt.plot(X, regr.predict(X), color='red', label='blew_-5%')
+    # plt.plot(X, regr1.predict(X), color='blue', label='blew_-10%')
     plt.plot(X, regr2.predict(X), color='green', label='bottom_quartile')
-    plt.plot(every_year_important_countries.year,
-             every_year_important_countries['number_of_important_countries_blew_-5%'],
-             linewidth=1, color='red')
-    plt.plot(every_year_important_countries.year,
-             every_year_important_countries['number_of_important_countries_blew_-10%'],
-             linewidth=1, color='blue')
+    # plt.plot(every_year_important_countries.year,
+    #          every_year_important_countries['number_of_important_countries_blew_-5%'],
+    #          linewidth=1, color='red')
+    # plt.plot(every_year_important_countries.year,
+    #          every_year_important_countries['number_of_important_countries_blew_-10%'],
+    #          linewidth=1, color='blue')
     plt.plot(every_year_important_countries.year,
              every_year_important_countries.number_of_important_countries_bottom_quartile,
              linewidth=1, color='green')
     plt.xlabel('year')
     plt.ylabel('number')
     plt.legend()
-    plt.title(crop + ' ' + pore+'anomaly')
+    plt.title(crop + ' ' + pore+'anomalies')
     percent = 80
     if crop == 'maize':
         percent = 75
@@ -604,7 +630,7 @@ def calculate_the_linear_trends(crop, every_year_important_countries,pore):
         percent = 75
     if crop=='soy':
         percent=0.85
-    fig.savefig('figures/linear trend/' + crop + str(percent) + smooth + pore+'.png')
+    fig.savefig('figures/linear trend/' + crop +' '+ str(percent) +' '+smooth  +' '+pore+'.png')
     # plt.show()
 
 
@@ -808,13 +834,17 @@ def calculate_censored_percent_yield_anomaly_time_series (crop,important_countri
     important_countries = important_countries.to_list()
     X = df[['year']].drop_duplicates()
     smooth = df.columns[-4]
+    colors = ['b', 'c', 'k','g','m','r','y','gray','greenyellow','peru','slategray']
+    slopes={}
     if smooth=='yldAnomGau':
         df['yldAnomGau'][df['yldAnomGau'] > 0] = 0
-        for country in important_countries:
+        for i,country in enumerate(important_countries):
             Y = df[df['country']==country]['yldAnomGau']
             regr = LinearRegression()
             regr.fit(X, Y)
-            plt.plot(X, regr.predict(X), color=np.random.rand(3, ), linewidth=1,label=country)
+            coefficient=regr.coef_
+            slopes[country]=coefficient
+            plt.plot(X, regr.predict(X), color=colors[i], linewidth=1,label=country)
 
         plt.xlabel('year')
         plt.ylabel('number')
@@ -827,8 +857,318 @@ def calculate_censored_percent_yield_anomaly_time_series (crop,important_countri
             percent = 75
         if crop == 'soy':
             percent = 0.85
-        fig.savefig('data/linear trend/' + crop + str(percent) + smooth + 'censoredyieldanomalies.png')
+
+        # fig.savefig('figures/linear trend/' + crop+ ' '+ str(percent) + ' '+smooth + ' '+'censored_yield_anomalies.png')
+        slopes=sorted(slopes.items(),key=lambda x: x[1],reverse=True)
+        stabilization_countries=[]
+        c=Counter()
+        stabilization=slopes[:4]
+        for i, country in enumerate(stabilization):
+            stabilization_countries.append(country[0])
+        return   stabilization_countries,df
+    if smooth == 'yldAnomSmooth5':
+        return
+    if smooth == 'yldAnomSmooth9':
+        return
+
+def climate_trend_each_country(crop,stabilization_countries,df_clim,censored_yield):
+    # stabilization_countries is the important countries list with strongest stabilization trends,include 4 countries
+
+    smooth = censored_yield.columns[-4]
+    if crop == 'maize':
+        percent = 75
+    if crop == 'wheat':
+        percent = 75
+    if crop == 'soy':
+        percent = 0.85
+
+    # for country in stabilization_countries:
+    #     fig = plt.figure()
+    #     #  disintegrate the data to  concrete climate indicators to avoid plotting the NAN values
+    #     df_c = df_clim[df_clim['country']==country]
+    #     df1 = df_c[['year', 'sumP1']]
+    #     df2 = df_c[['year', 'EDD1']]
+    #     df3 = df_c[['year', 'sfcSMfl1']]
+    #     df4 = df_c[['year', 'sfcSMgl1']]
+    #     df1.dropna(inplace=True)
+    #     df2.dropna(inplace=True)
+    #     df3.dropna(inplace=True)
+    #     df4.dropna(inplace=True)
+    #     X1 = df1[['year']]
+    #     X2 = df2[['year']]
+    #     X3 = df3[['year']]
+    #     X4 = df4[['year']]
+    #     regr1 = LinearRegression()
+    #     regr2 = LinearRegression()
+    #     regr3 = LinearRegression()
+    #     regr4 = LinearRegression()
+    #     Y1 = df1['sumP1']
+    #     Y2 = df2['EDD1']
+    #     Y3 = df3['sfcSMfl1']
+    #     Y4 = df4['sfcSMgl1']
+    #     regr1.fit(X1, Y1)
+    #     regr2.fit(X2, Y2)
+    #     regr3.fit(X3, Y3)
+    #     regr4.fit(X4, Y4)
+    #     # plt.plot(X1, regr1.predict(X1), color='blue', linewidth=1, label='sumP1')
+    #     # plt.plot(X2, regr2.predict(X2), color='red',linewidth=1, label='EDD1')
+    #     # plt.plot(X3, regr3.predict(X3), color='green',linewidth=1, label='sfcSMfl1')
+    #     # plt.plot(X4, regr4.predict(X4),  color='greenyellow',linewidth=1, label='sfcSMgl1')
+    #
+    #     plt.xlabel('year')
+    #     plt.ylabel('')
+    #     plt.legend()
+    #     plt.title(crop +country+ ' ' + 'climate variables')
+    #     fig.savefig('figures/linear trend/climate/' + crop + str(percent) + smooth + country+'climate_variables.png')
+    for country in stabilization_countries:
+        fig = plt.figure()
+        df_c = df_clim[df_clim['country'] == country]
+        df1 = df_c[['year', 'sumP1']]
+        df2 = df_c[['year', 'EDD1']]
+        df3 = df_c[['year', 'sfcSMfl1']]
+        df4 = df_c[['year', 'sfcSMgl1']]
+        df1.dropna(inplace=True)
+        df2.dropna(inplace=True)
+        df3.dropna(inplace=True)
+        df4.dropna(inplace=True)
+        df_c_list=[df1,df2,df3,df4]
+        local=221
+        i=0
+        for df_c in df_c_list:
+            df_c.reset_index(inplace=True)
+            clim_var=df_c.columns[-1]
+            ax1=fig.add_subplot(221+i)
+            i=i+1
+            yearlist=df_c['year'].to_list()
+            censored_yield_trend=[]
+            climate_variable=[]
+            for year in yearlist:
+                x=censored_yield[(censored_yield['country'] == country) & (censored_yield['year'] == year)]['yldAnomGau'].values
+                censored_yield_trend.append(x)
+                y=df_c.loc[df_c['year']==year,clim_var].values
+                climate_variable.append(y)
+
+            # censored_yield_trend=np.array(censored_yield_trend)
+            # climate_variable=np.array(climate_variable)
+            ax1.scatter(censored_yield_trend,climate_variable,c="hotpink", edgecolors="blue",s=20)
+            plt.xlabel('censored_yield_anomalies')
+            plt.tight_layout()
+            plt.ylabel(clim_var)
+            plt.title(country+'_'+clim_var+'-censored_yield')
+        fig.savefig('figures/linear trend/climate/' + crop + str(
+                percent) + smooth + country + 'climate_variables_scatterplot.png')
+
+def climate_yield_each_country(crop,stabilization_countries,df_clim,censored_yield):
+    # stabilization_countries is the important countries list with strongest stabilization trends,include 4 countries
+
+    smooth = censored_yield.columns[-4]
+    if crop == 'maize':
+        percent = 75
+    if crop == 'wheat':
+        percent = 75
+    if crop == 'soy':
+        percent = 0.85
+
+    # for country in stabilization_countries:
+    #     fig = plt.figure()
+    #     #  disintegrate the data to  concrete climate indicators to avoid plotting the NAN values
+    #     df_c = df_clim[df_clim['country']==country]
+    #     df1 = df_c[['year', 'sumP1']]
+    #     df2 = df_c[['year', 'EDD1']]
+    #     df3 = df_c[['year', 'sfcSMfl1']]
+    #     df4 = df_c[['year', 'sfcSMgl1']]
+    #     df1.dropna(inplace=True)
+    #     df2.dropna(inplace=True)
+    #     df3.dropna(inplace=True)
+    #     df4.dropna(inplace=True)
+    #     X1 = df1[['year']]
+    #     X2 = df2[['year']]
+    #     X3 = df3[['year']]
+    #     X4 = df4[['year']]
+    #     regr1 = LinearRegression()
+    #     regr2 = LinearRegression()
+    #     regr3 = LinearRegression()
+    #     regr4 = LinearRegression()
+    #     Y1 = df1['sumP1']
+    #     Y2 = df2['EDD1']
+    #     Y3 = df3['sfcSMfl1']
+    #     Y4 = df4['sfcSMgl1']
+    #     regr1.fit(X1, Y1)
+    #     regr2.fit(X2, Y2)
+    #     regr3.fit(X3, Y3)
+    #     regr4.fit(X4, Y4)
+    #     # plt.plot(X1, regr1.predict(X1), color='blue', linewidth=1, label='sumP1')
+    #     # plt.plot(X2, regr2.predict(X2), color='red',linewidth=1, label='EDD1')
+    #     # plt.plot(X3, regr3.predict(X3), color='green',linewidth=1, label='sfcSMfl1')
+    #     # plt.plot(X4, regr4.predict(X4),  color='greenyellow',linewidth=1, label='sfcSMgl1')
+    #
+    #     plt.xlabel('year')
+    #     plt.ylabel('')
+    #     plt.legend()
+    #     plt.title(crop +country+ ' ' + 'climate variables')
+    #     fig.savefig('figures/linear trend/climate/' + crop + str(percent) + smooth + country+'climate_variables.png')
+    for country in stabilization_countries:
+        fig = plt.figure()
+        df_c = df_clim[df_clim['country'] == country]
+        df1 = df_c[['year', 'sumP1']]
+        df2 = df_c[['year', 'EDD1']]
+        df3 = df_c[['year', 'sfcSMfl1']]
+        df4 = df_c[['year', 'sfcSMgl1']]
+        df1.dropna(inplace=True)
+        df2.dropna(inplace=True)
+        df3.dropna(inplace=True)
+        df4.dropna(inplace=True)
+        df_c_list=[df1,df2,df3,df4]
+        local=221
+        i=0
+        for df_c in df_c_list:
+            df_c.reset_index(inplace=True)
+            clim_var=df_c.columns[-1]
+            ax1=fig.add_subplot(221+i)
+            i=i+1
+            yearlist=df_c['year'].to_list()
+            censored_yield_trend=[]
+            climate_variable=[]
+            for year in yearlist:
+                x=censored_yield[(censored_yield['country'] == country) & (censored_yield['year'] == year)]['yldAnomGau'].values
+                censored_yield_trend.append(x)
+                y=df_c.loc[df_c['year']==year,clim_var].values
+                climate_variable.append(y)
+
+            # censored_yield_trend=np.array(censored_yield_trend)
+            # climate_variable=np.array(climate_variable)
+            ax1.scatter(censored_yield_trend,climate_variable,c="hotpink", edgecolors="blue",s=20)
+            plt.xlabel('censored_yield_anomalies')
+            plt.tight_layout()
+            plt.ylabel(clim_var)
+            plt.title(country+'_'+clim_var+'-censored_yield')
+        fig.savefig('figures/linear trend/climate/' + crop + str(
+                percent) + smooth + country + 'climate_variables_scatterplot.png')
+
+def gam(crop, stabilization_countries, df_clim):
+    for country in stabilization_countries:
+        regDF=df_clim[df_clim['country']==country]
+        Xtemp=np.append(regDF.CDD1.values[:, np.newaxis], regDF.EDD1.values[:, np.newaxis],1)
+        Xtemp2 = np.append(regDF.CDD1haWgt.values[:, np.newaxis], regDF.EDD1haWgt.values[:, np.newaxis], 1)
+        Y1 = regDF.yldAnomGau.values
+        Y2 = regDF.yldAnomGau.values
+        X1 = np.append(regDF.sumP1.values[:, np.newaxis], Xtemp, 1)
+        X1 = np.append(regDF.TAV1.values[:, np.newaxis], X1, 1) #append TAV1
+
+        X2 = np.append(regDF.sumP1haWgt.values[:, np.newaxis], Xtemp2, 1)
+        X1 = np.append(X1, regDF.year.values.astype(int)[:, np.newaxis], 1)
+        X2 = np.append(X2, regDF.year.values.astype(int)[:, np.newaxis], 1)
+        finiteVals1 = np.isfinite(X1[:, 1]) & np.isfinite(X1[:, 2]) & np.isfinite(X1[:, 0]) & np.isfinite(Y1)
+        X1 = X1[finiteVals1, :]
+        Y1 = Y1[finiteVals1]
+        finiteVals2 = np.isfinite(X2[:, 1]) & np.isfinite(X2[:, 2]) & np.isfinite(X2[:, 0]) & np.isfinite(Y2)
+        X2 = X2[finiteVals2, :]
+        Y2 = Y2[finiteVals2]
+        gam1 = LinearGAM(s(0)+s(1)+s(2)+s(3) + te(3, 1) + te(2, 1), n_splines=6).fit(X1, Y1)
+        gam2 = LinearGAM(s(0)+s(1)+s(2)+s(3) + te(2, 0) + te(1, 0), n_splines=6).fit(X2, Y2)
+        gam1.summary()
+        fig = plt.figure()
+        for i,term in enumerate(gam1.terms):
+            if term.isintercept:
+                continue
+            if (i == 0)|(i == 1)|(i == 2)|(i == 3):
+                ax = plt.subplot(331 + i)
+                XX = gam1.generate_X_grid(term=i)
+                ax.plot(XX[:, i], gam1.partial_dependence(term=i, X=XX))
+                ax.plot(XX[:, i], gam1.partial_dependence(term=i, X=XX, width=.95)[1], c='r', ls='--')
+                if i == 0:
+                    ax.set_xlabel('TAV')
+                if i == 1:
+                    ax.set_xlabel('Precipitation')
+                if i == 2:
+                    ax.set_xlabel('CDD')
+                if i == 3:
+                    ax.set_xlabel('EDD')
+                ax.set_ylabel('Yield anomaly')
+                ax.set_title(repr(term))
+                plt.tight_layout()
+            if (i == 4) | (i == 5):
+                ax = plt.subplot(331 + i, projection='3d')
+                XX = gam1.generate_X_grid(term=i,meshgrid=True)
+                pdPlot = gam1.partial_dependence(term=i, X=XX, meshgrid=True)
+                ax.plot_surface(XX[0],XX[0],pdPlot,cmap='PuOr',vmin=-0.15,vmax=0.15)
+                ax.set_ylabel('Precipitation')
+                if i == 4:
+                    ax.set_xlabel('EDD')
+                if i == 5:
+                    ax.set_xlabel('CDD')
+                ax.set_zlabel('Yield anomaly')
+                    # plt.plot(XX[:,i],gam1.partial_dependence(term=i,X=XX,width=0.95)[1], c='r',ls='--')
+                    # plt.title(repr(term))
+                plt.title(repr(term)+',term p-value:'+str(round(gam1.statistics_['p_values'][1],3)))
+                plt.tight_layout()
+        # fig.savefig('figures/linear trend/climate/' + crop+' '+ country + 'Precipitation_relative_anomalies.png')
+        predict_yield = gam1.predict(X1)
+        compare_predict(crop,country,predict_yield, X1, Y1)
 
 
-calculate_exportation()
-# calculate_production()
+def random_forests(crop, stabilization_countries, df_clim):
+    for country in stabilization_countries:
+        fig1 = plt.figure()
+        regDF = df_clim[df_clim['country'] == country]
+        X= regDF[['year','sumP1', 'EDD1', 'sfcSMfl1','CDD1']]
+        X.set_index('year',append=False,inplace=True)
+        X.fillna(0,inplace=True)
+        Y=regDF[['year','yldAnomGau']]
+        Y.set_index('year', append=False, inplace=True)
+        clf = RF(max_depth=3, n_estimators=100, criterion='mae')
+        frst = clf.fit(X, Y)
+        # x=pd.DataFrame(frst.predict(X))
+        plt.plot(X.index, frst.predict(X),c='red',label='predictive_yield_anomalies');
+        plt.plot(Y,c='blue',label='actual_yield_anomalies')
+        plt.legend()
+        plt.ylabel('year')
+        plt.xlabel('yield anomalies')
+        plt.title('Random Forest '+crop+ ' '+ country)
+        fig1.savefig('figures/linear trend/climate/' + crop + ' ' + country + '_random_forest_compare.png')
+        pdPlots=[0,2,(1,0),(1,2),(3,2)]
+        x = plot_partial_dependence(frst, X, pdPlots)
+
+
+
+def plot_scatter(crop,df):
+    fig = plt.figure()
+    df_c = df[df['country'] == 'United States of America']
+    df1 = df_c[['year','yldAnomGau', 'sumP1']]
+    df1.dropna(inplace=True)
+    df1.reset_index(inplace=True)
+    clim_var = df1.columns[-1]
+    ax1 = fig.add_subplot(111)
+    yearlist = df1['year'].to_list()
+    yield_trend = []
+    climate_variable = []
+    for year in yearlist:
+        x = df1[ df1['year'] == year]['yldAnomGau'].values
+        yield_trend.append(x)
+        y = df1.loc[df1['year'] == year, clim_var].values
+        climate_variable.append(y)
+    ax1.scatter(yield_trend, climate_variable, c="hotpink", edgecolors="blue", s=20)
+    plt.xlabel('yield_anomalies')
+    plt.tight_layout()
+    plt.ylabel(clim_var)
+    plt.title( clim_var + '_yield')
+    fig.savefig('figures/linear trend/climate/' + crop + 'US-sump_scatter.png')
+
+def compare_predict(crop,country,predict_yield,X1,Y1):
+
+    predict_yield = pd.DataFrame(predict_yield)
+    ac_yield = pd.DataFrame(Y1)
+    X1 = pd.DataFrame(X1)
+    # year = X1[3]
+    fig = plt.figure()
+    plt.plot(X1[4],ac_yield,c='blue',label='actual_yield_anomalies')
+    plt.plot(X1[4], predict_yield,c='red',label='predict_yield_anomalies')
+    plt.legend()
+    plt.title('GAM '+crop+ ' '+ country)
+    plt.xlabel('year')
+    plt.ylabel('yield anomalies')
+    fig.savefig('figures/linear trend/climate/' + crop + ' ' + country + 'yield_compare_soil.png')
+
+
+# calculate_exportation()
+calculate_production()
